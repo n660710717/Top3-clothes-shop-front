@@ -1,101 +1,125 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { register } from '../api/backend';
+import { DEFAULT_USERS } from './LoginPage';
 
 export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState('buyer');
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
-  const handleRegister = async (e) => {
+  const handleRegister = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
+    setErrorMessage('');
 
-    try {
-      await register(email, password, displayName);
-      alert('สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ');
-      navigate('/login');
-    } catch (err) {
-      // สำหรับกรณีทดสอบแบบออฟไลน์
-      localStorage.setItem('user', JSON.stringify({ email, displayName: displayName || 'ผู้ใช้ใหม่', role: 'buyer' }));
-      localStorage.setItem('token', 'mock-token-1234');
-      window.dispatchEvent(new Event('storage'));
-      alert('สมัครสมาชิกและเข้าสู่ระบบทดลองสำเร็จ!');
-      navigate('/');
-    } finally {
-      setLoading(false);
+    const storedUsers = JSON.parse(localStorage.getItem('app_users') || JSON.stringify(DEFAULT_USERS));
+
+    // เช็คอีเมลซ้ำ
+    if (storedUsers.some((u) => u.email.toLowerCase() === email.trim().toLowerCase())) {
+      setErrorMessage('อีเมลนี้ถูกใช้งานในระบบแล้ว');
+      return;
     }
+
+    const newUser = {
+      id: Date.now(),
+      displayName: displayName.trim(),
+      email: email.trim(),
+      password: password,
+      role: role
+    };
+
+    // บันทึกสมาชิกใหม่ลง localStorage (เพื่อให้ขึ้นใน Admin Dashboard)
+    storedUsers.push(newUser);
+    localStorage.setItem('app_users', JSON.stringify(storedUsers));
+
+    alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ');
+    navigate('/login');
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+    <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center p-4 font-sans text-[#4A3B32]">
+      <div className="bg-white rounded-3xl border border-[#EBD9C8] p-8 max-w-md w-full shadow-xl">
         <div className="text-center mb-6">
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white text-xl mb-2">
-            👕
-          </div>
-          <h2 className="text-xl font-bold text-slate-800">สมัครสมาชิก</h2>
-          <p className="text-xs text-slate-500 mt-1">สร้างบัญชีเพื่อสั่งซื้อเสื้อผ้าและรับสิทธิพิเศษ</p>
+          <Link to="/" className="inline-flex items-center gap-2 font-bold text-xl text-[#6B4F3B]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8C6D58] text-white text-lg shadow">
+              🧶
+            </span>
+            <span>Clothing<span className="text-[#8C6D58]">Hub</span></span>
+          </Link>
+          <h1 className="text-lg font-bold text-[#38281F] mt-4">สมัครสมาชิกใหม่</h1>
         </div>
 
-        {error && <div className="mb-4 text-xs text-rose-500 bg-rose-50 p-2.5 rounded-lg border border-rose-100">{error}</div>}
+        {errorMessage && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+            ⚠️ {errorMessage}
+          </div>
+        )}
 
-        <form onSubmit={handleRegister} className="space-y-3.5">
+        <form onSubmit={handleRegister} className="space-y-3.5 text-xs">
           <div>
-            <label className="text-xs font-semibold text-slate-700">ชื่อผู้ใช้ / Display Name</label>
+            <label className="font-semibold text-[#533C2C]">ชื่อผู้ใช้งาน / ชื่อร้านค้า</label>
             <input
               type="text"
               required
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="เช่น Somchai Fashion"
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              placeholder="เช่น คุณกิตติ หรือ My Shop"
+              className="mt-1 w-full p-2.5 border border-[#DCC5AF] rounded-xl focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-700">อีเมล</label>
+            <label className="font-semibold text-[#533C2C]">อีเมล</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              placeholder="example@domain.com"
+              className="mt-1 w-full p-2.5 border border-[#DCC5AF] rounded-xl focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-700">รหัสผ่าน</label>
+            <label className="font-semibold text-[#533C2C]">กำหนดรหัสผ่าน</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              placeholder="อย่างน้อย 6 ตัวอักษร"
+              className="mt-1 w-full p-2.5 border border-[#DCC5AF] rounded-xl focus:outline-none"
             />
+          </div>
+
+          <div>
+            <label className="font-semibold text-[#533C2C]">ประเภทบัญชีผู้ใช้</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="mt-1 w-full p-2.5 border border-[#DCC5AF] rounded-xl bg-white font-medium"
+            >
+              <option value="buyer">👤 ผู้ซื้อ (Buyer)</option>
+              <option value="seller">🏪 ผู้ขาย (Seller)</option>
+            </select>
           </div>
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg text-xs transition shadow-sm mt-2"
+            className="w-full bg-[#6B4F3B] hover:bg-[#533C2C] text-white font-bold py-3 rounded-xl text-xs transition shadow-md mt-2"
           >
-            {loading ? 'กำลังบันทึกข้อมูล...' : 'ลงทะเบียนสมัครสมาชิก'}
+            ยืนยันสมัครสมาชิก
           </button>
         </form>
 
-        <p className="mt-5 text-center text-xs text-slate-500">
-          มีบัญชีอยู่แล้ว?{' '}
-          <Link to="/login" className="text-emerald-600 font-semibold hover:underline">
-            เข้าสู่ระบบที่นี่
+        <div className="mt-5 text-center text-xs">
+          <span className="text-[#A68F7E]">มีบัญชีผู้ใช้อยู่แล้ว? </span>
+          <Link to="/login" className="font-bold text-[#8C6D58] hover:underline">
+            เข้าสู่ระบบ
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
