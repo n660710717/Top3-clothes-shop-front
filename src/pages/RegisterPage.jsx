@@ -23,7 +23,11 @@ export default function RegisterPage() {
 
     try {
       await register(email.trim(), password, displayName.trim(), role);
-      notify('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ');
+      if (role === 'seller') {
+        notify('ส่งคำขอเปิดร้านแล้ว รอผู้ดูแลอนุมัติ ตอนนี้เข้าสู่ระบบในฐานะผู้ซื้อได้');
+      } else {
+        notify('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ');
+      }
       navigate('/login');
     } catch (err) {
       setErrorMessage(err.message || 'สมัครสมาชิกไม่สำเร็จ');
