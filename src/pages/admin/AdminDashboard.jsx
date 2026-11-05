@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { DEFAULT_USERS } from '../LoginPage';
+import { getAdminMembers } from '../../api/backend';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('members');
@@ -11,8 +11,8 @@ export default function AdminDashboard() {
 
   // โหลดรายการสมาชิกทั้งหมดที่สมัครเข้ามาในระบบ
   useEffect(() => {
-    const storedUsers = JSON.parse(localStorage.getItem('app_users') || JSON.stringify(DEFAULT_USERS));
-    setMembers(storedUsers);
+    const token = localStorage.getItem('token');
+    getAdminMembers(token).then(setMembers).catch(() => setMembers([]));
 
     const savedDisputes = JSON.parse(localStorage.getItem('disputes') || '[]');
     setDisputes(savedDisputes);

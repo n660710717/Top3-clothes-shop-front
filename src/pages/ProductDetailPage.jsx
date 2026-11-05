@@ -33,11 +33,10 @@ export default function ProductDetailPage() {
     getProduct(id).then((data) => {
       setProduct(data);
       if (data?.sizes && data.sizes.length > 0) setSelectedSize(data.sizes[0]);
-      
-      setReviewsList([
-        { id: 1, user: 'คุณสุภาพร (Buyer)', rating: 5, comment: 'ผ้านุ่มมาก สีสวยตรงปก ส่งไวมากค่ะ', date: '2 วันที่แล้ว' },
-        { id: 2, user: 'คุณกิตติศักดิ์ (Buyer)', rating: 4, comment: 'ขนาดพอดีตัว ผ้าใส่สบายไม่อึดอัดเลยครับ', date: 'สัปดาห์ที่แล้ว' }
-      ]);
+      setReviewsList([]);
+      setLoading(false);
+    }).catch(() => {
+      setProduct(null);
       setLoading(false);
     });
   }, [id]);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { DEFAULT_USERS } from './LoginPage';
+import { register } from '../api/backend';
 
 export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('');
@@ -10,32 +10,22 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMessage('');
 
-    const storedUsers = JSON.parse(localStorage.getItem('app_users') || JSON.stringify(DEFAULT_USERS));
-
-    // เช็คอีเมลซ้ำ
-    if (storedUsers.some((u) => u.email.toLowerCase() === email.trim().toLowerCase())) {
-      setErrorMessage('อีเมลนี้ถูกใช้งานในระบบแล้ว');
+    if (password.length < 8) {
+      setErrorMessage('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');
       return;
     }
 
-    const newUser = {
-      id: Date.now(),
-      displayName: displayName.trim(),
-      email: email.trim(),
-      password: password,
-      role: role
-    };
-
-    // บันทึกสมาชิกใหม่ลง localStorage (เพื่อให้ขึ้นใน Admin Dashboard)
-    storedUsers.push(newUser);
-    localStorage.setItem('app_users', JSON.stringify(storedUsers));
-
-    alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ');
-    navigate('/login');
+    try {
+      await register(email.trim(), password, displayName.trim(), role);
+      alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ');
+      navigate('/login');
+    } catch (err) {
+      setErrorMessage(err.message || 'สมัครสมาชิกไม่สำเร็จ');
+    }
   };
 
   return (
@@ -89,7 +79,7 @@ export default function RegisterPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="อย่างน้อย 6 ตัวอักษร"
+              placeholder="อย่างน้อย 8 ตัวอักษร"
               className="mt-1 w-full p-2.5 border border-[#DCC5AF] rounded-xl focus:outline-none"
             />
           </div>

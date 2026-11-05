@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { DEFAULT_USERS } from './LoginPage';
+import { changePassword } from '../api/backend';
 
 export default function UserProfilePage() {
-  const [currentUser, setCurrentUser] = useState(() => {
+  const [currentUser] = useState(() => {
     return JSON.parse(localStorage.getItem('user') || '{"displayName":"Praewa Buyer","email":"praewa@buyer.com","role":"buyer"}');
   });
 
@@ -19,47 +19,30 @@ export default function UserProfilePage() {
   ]);
 
   // ฟังก์ชันเปลี่ยนรหัสผ่านจริง
-  const handleChangePassword = (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
     setPasswordMsg({ type: '', text: '' });
-
-    const storedUsers = JSON.parse(localStorage.getItem('app_users') || JSON.stringify(DEFAULT_USERS));
-    const userIndex = storedUsers.findIndex((u) => u.email.toLowerCase() === currentUser.email.toLowerCase());
-
-    if (userIndex === -1) {
-      setPasswordMsg({ type: 'error', text: 'ไม่พบข้อมูลบัญชีผู้ใช้ในระบบ' });
-      return;
-    }
-
-    // ตรวจสอบรหัสผ่านเดิม
-    if (storedUsers[userIndex].password !== oldPassword) {
-      setPasswordMsg({ type: 'error', text: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
-      return;
-    }
 
     if (newPassword !== confirmPassword) {
       setPasswordMsg({ type: 'error', text: 'รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน' });
       return;
     }
 
-    if (newPassword.length < 6) {
-      setPasswordMsg({ type: 'error', text: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร' });
+    if (newPassword.length < 8) {
+      setPasswordMsg({ type: 'error', text: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 8 ตัวอักษร' });
       return;
     }
 
-    // อัปเดตรหัสผ่านใหม่ลงฐานข้อมูล app_users
-    storedUsers[userIndex].password = newPassword;
-    localStorage.setItem('app_users', JSON.stringify(storedUsers));
-
-    // อัปเดตข้อมูลเซสชันปัจจุบัน
-    const updatedCurrentUser = { ...currentUser, password: newPassword };
-    localStorage.setItem('user', JSON.stringify(updatedCurrentUser));
-    setCurrentUser(updatedCurrentUser);
-
-    setPasswordMsg({ type: 'success', text: 'เปลี่ยนรหัสผ่านสำเร็จ! กรุณใช้รหัสผ่านใหม่ในการเข้าสู่ระบบครั้งถัดไป' });
-    setOldPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    try {
+      const token = localStorage.getItem('token');
+      await changePassword(oldPassword, newPassword, token);
+      setPasswordMsg({ type: 'success', text: 'เปลี่ยนรหัสผ่านสำเร็จ! กรุณาใช้รหัสผ่านใหม่ในการเข้าสู่ระบบครั้งถัดไป' });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPasswordMsg({ type: 'error', text: err.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ' });
+    }
   };
 
   return (
@@ -121,7 +104,7 @@ export default function UserProfilePage() {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="อย่างน้อย 6 ตัวอักษร"
+                  placeholder="อย่างน้อย 8 ตัวอักษร"
                   className="mt-1 w-full p-2.5 border border-[#DCC5AF] rounded-xl focus:outline-none"
                 />
               </div>

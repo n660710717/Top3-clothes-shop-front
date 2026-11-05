@@ -25,7 +25,7 @@ export default function SellerDashboard() {
   });
 
   useEffect(() => {
-    getProducts().then((data) => setProducts(data || []));
+    getProducts().then((data) => setProducts(data || [])).catch(() => setProducts([]));
   }, []);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function SellerDashboard() {
       setProducts(products.filter((p) => p.id !== id));
       alert('ลบสินค้าสำเร็จ');
     } catch (e) {
-      setProducts(products.filter((p) => p.id !== id));
+      alert(e.message || 'ลบสินค้าไม่สำเร็จ');
     }
   };
 

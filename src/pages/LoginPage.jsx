@@ -1,52 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-
-// บัญชีผู้ดูแลระบบเริ่มต้นสำหรับเข้าใช้งานหลังบ้าน
-export const DEFAULT_USERS = [
-  { id: 1, email: 'admin@clothinghub.com', password: 'Admin1234!', displayName: 'Admin Manager', role: 'admin' }
-];
+import { useAuth } from '../auth/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  useEffect(() => {
-    const existingUsers = localStorage.getItem('app_users');
-    if (!existingUsers) {
-      localStorage.setItem('app_users', JSON.stringify(DEFAULT_USERS));
-    }
-  }, []);
-
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
-
-    const storedUsers = JSON.parse(localStorage.getItem('app_users') || JSON.stringify(DEFAULT_USERS));
-    
-    // ตรวจสอบอีเมลและรหัสผ่านกับระบบจริง
-    const foundUser = storedUsers.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
-    );
-
-    if (!foundUser) {
-      setErrorMessage('อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
-      return;
-    }
-
-    // บันทึกการเข้าสู่ระบบ
-    localStorage.setItem('user', JSON.stringify(foundUser));
-    localStorage.setItem('token', 'auth-token-' + Date.now());
-    window.dispatchEvent(new Event('storage'));
-
-    // แยกเส้นทางตามบทบาทของผู้ใช้ที่สมัครเข้ามา
-    if (foundUser.role === 'admin') {
-      navigate('/admin');
-    } else if (foundUser.role === 'seller') {
-      navigate('/seller');
-    } else {
-      navigate('/');
+    setSubmitting(true);
+    try {
+      const member = await login(email.trim(), password);
+      if (member?.role === 'admin') {
+        navigate('/admin');
+      } else if (member?.role === 'seller') {
+        navigate('/seller');
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      setErrorMessage(err.message || 'เข้าสู่ระบบไม่สำเร็จ');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -64,14 +44,12 @@ export default function LoginPage() {
           <p className="text-xs text-[#A68F7E]">กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งานระบบ</p>
         </div>
 
-        {/* ข้อความแจ้งเตือนเมื่อเข้าสู่ระบบไม่สำเร็จ */}
         {errorMessage && (
           <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
             ⚠️ {errorMessage}
           </div>
         )}
 
-        {/* ฟอร์มเข้าสู่ระบบ */}
         <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
           <div>
             <label className="font-semibold text-[#533C2C]">อีเมล (Email)</label>
@@ -99,9 +77,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full bg-[#6B4F3B] hover:bg-[#533C2C] text-white font-bold py-3 rounded-xl text-xs transition shadow-md mt-2"
+            disabled={submitting}
+            className="w-full bg-[#6B4F3B] hover:bg-[#533C2C] text-white font-bold py-3 rounded-xl text-xs transition shadow-md mt-2 disabled:opacity-60"
           >
-            เข้าสู่ระบบ
+            {submitting ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
           </button>
         </form>
 

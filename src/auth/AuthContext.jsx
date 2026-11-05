@@ -3,32 +3,42 @@ import * as api from '../api/backend';
 
 const AuthContext = createContext(null);
 
+function readUser() {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null');
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('store.token'));
-  const [member, setMember] = useState(() => JSON.parse(localStorage.getItem('store.member') || 'null'));
+  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  const [member, setMember] = useState(readUser);
 
   function remember({ token, member }) {
     setToken(token);
     setMember(member);
-    localStorage.setItem('store.token', token);
-    localStorage.setItem('store.member', JSON.stringify(member));
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(member));
+    window.dispatchEvent(new Event('storage'));
   }
 
   async function login(email, password) {
     const data = await api.login(email, password);
     remember(data);
+    return data.member;
   }
 
   function logout() {
     setToken(null);
     setMember(null);
-    localStorage.removeItem('store.token');
-    localStorage.removeItem('store.member');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.dispatchEvent(new Event('storage'));
   }
 
-  // คำนวณสถานะสิทธิ์สดๆ
   const isLoggedIn = Boolean(token);
-  const role = member?.role || 'buyer'; // 'buyer' | 'seller' | 'admin'
+  const role = member?.role || 'buyer';
   const isBuyer = role === 'buyer';
   const isSeller = role === 'seller';
   const isAdmin = role === 'admin';
