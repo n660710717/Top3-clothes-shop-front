@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { getWishlist, toggleWishlist } from '../api/backend';
+import { useNotice } from '../components/Notice';
 
 export default function WishlistPage() {
   const [wishlist, setWishlist] = useState([]);
+  const { notify } = useNotice();
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -21,7 +23,7 @@ export default function WishlistPage() {
       setWishlist(wishlist.filter((item) => item.id !== id));
       window.dispatchEvent(new Event('wishlistUpdated'));
     } catch (err) {
-      alert(err.message || 'นำออกจากรายการที่ชอบไม่สำเร็จ');
+      notify(err.message || 'นำออกจากรายการที่ชอบไม่สำเร็จ');
     }
   };
 

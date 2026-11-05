@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register } from '../api/backend';
+import { useNotice } from '../components/Notice';
 
 export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('');
@@ -9,6 +10,7 @@ export default function RegisterPage() {
   const [role, setRole] = useState('buyer');
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
+  const { notify } = useNotice();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -21,7 +23,7 @@ export default function RegisterPage() {
 
     try {
       await register(email.trim(), password, displayName.trim(), role);
-      alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ');
+      notify('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ');
       navigate('/login');
     } catch (err) {
       setErrorMessage(err.message || 'สมัครสมาชิกไม่สำเร็จ');

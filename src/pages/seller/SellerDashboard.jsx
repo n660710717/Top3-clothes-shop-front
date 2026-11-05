@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getSellerProducts, deleteProduct, getSellerOrders, shipOrder, createSellerProduct, updateSellerProduct } from '../../api/backend';
+import { useNotice } from '../../components/Notice';
 
 export default function SellerDashboard() {
   const [activeTab, setActiveTab] = useState('products');
   const [products, setProducts] = useState([]);
   const token = localStorage.getItem('token');
+  const { notify, confirm } = useNotice();
   //const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
@@ -22,13 +24,13 @@ export default function SellerDashboard() {
   }, [token]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('คุณแน่ใจว่าต้องการลบสินค้านี้ออกจากร้าน Somchai Seller Shop?')) return;
+    if (!(await confirm('คุณแน่ใจว่าต้องการลบสินค้านี้ออกจากร้าน Somchai Seller Shop?'))) return;
     try {
       await deleteProduct(id, token);
       setProducts(products.filter((p) => p.id !== id));
-      alert('ลบสินค้าสำเร็จ');
+      notify('ลบสินค้าสำเร็จ');
     } catch (e) {
-      alert(e.message || 'ลบสินค้าไม่สำเร็จ');
+      notify(e.message || 'ลบสินค้าไม่สำเร็จ');
     }
   };
 
@@ -56,29 +58,29 @@ export default function SellerDashboard() {
     try {
       if (isEditing) {
         await updateSellerProduct(formProduct.id, body);
-        alert('แก้ไขรายละเอียดสินค้าเรียบร้อย');
+        notify('แก้ไขรายละเอียดสินค้าเรียบร้อย');
       } else {
         await createSellerProduct(body);
-        alert('เพิ่มสินค้าใหม่เรียบร้อย');
+        notify('เพิ่มสินค้าใหม่เรียบร้อย');
       }
       setProducts(await getSellerProducts(token));
       setShowModal(false);
     } catch (err) {
-      alert(err.message || 'บันทึกสินค้าไม่สำเร็จ');
+      notify(err.message || 'บันทึกสินค้าไม่สำเร็จ');
     }
   };
 
   const handleUpdateShipping = async (orderId, trackingNo) => {
     if (!trackingNo.trim()) {
-      alert('กรุณากรอกเลขพัสดุก่อนจัดส่ง');
+      notify('กรุณากรอกเลขพัสดุก่อนจัดส่ง');
       return;
     }
     try {
       await shipOrder(orderId, trackingNo.trim());
       setOrders(await getSellerOrders());
-      alert(`อัปเดตคำสั่งซื้อ ${orderId} เป็นจัดส่งแล้ว!`);
+      notify(`อัปเดตคำสั่งซื้อ ${orderId} เป็นจัดส่งแล้ว!`);
     } catch (err) {
-      alert(err.message || 'อัปเดตการจัดส่งไม่สำเร็จ');
+      notify(err.message || 'อัปเดตการจัดส่งไม่สำเร็จ');
     }
   };
 

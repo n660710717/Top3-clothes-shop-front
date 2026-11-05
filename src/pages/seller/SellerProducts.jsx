@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { getSellerProducts, deleteProduct } from '../../api/backend';
 import { Loading, ErrorBox, ConfirmBox} from '../../components/AdminStates';
+import { useNotice } from '../../components/Notice';
 
 export default function SellerProducts() {
   const { token } = useAuth();
+  const { notify } = useNotice();
   const [products, setProducts] = useState([]);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
@@ -33,7 +35,7 @@ export default function SellerProducts() {
       setProducts(products.filter((p) => p.id !== target.id));
       setTarget(null);
     } catch (err) {
-      alert(err.message);
+      notify(err.message);
     } finally {
       setBusy(false);
     }

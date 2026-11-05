@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getAdminMembers, setMemberRole } from '../../api/backend';
 import { Link } from 'react-router-dom';
+import { useNotice } from '../../components/Notice';
 
 export default function AdminMembersPage() {
   const [members, setMembers] = useState([]);
   const token = localStorage.getItem('token');
+  const { notify } = useNotice();
 
   useEffect(() => {
     getAdminMembers(token).then((data) => setMembers(data || []));
@@ -14,9 +16,9 @@ export default function AdminMembersPage() {
     try {
       await setMemberRole(memberId, newRole, token);
       setMembers(members.map((m) => (m.id === memberId ? { ...m, role: newRole } : m)));
-      alert('เปลี่ยนสิทธิ์สำเร็จ!');
+      notify('เปลี่ยนสิทธิ์สำเร็จ!');
     } catch (e) {
-      alert('เกิดข้อผิดพลาดในการเปลี่ยนสิทธิ์');
+      notify('เกิดข้อผิดพลาดในการเปลี่ยนสิทธิ์');
     }
   };
 

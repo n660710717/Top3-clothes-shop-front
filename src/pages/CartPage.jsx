@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { getCart, setCartItem, checkout } from '../api/backend';
+import { useNotice } from '../components/Notice';
 
 export default function CartPage() {
   const [cart, setCart] = useState([]);
   const navigate = useNavigate();
+  const { notify } = useNotice();
 
   const load = () => {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -28,7 +30,7 @@ export default function CartPage() {
       window.dispatchEvent(new Event('cartUpdated'));
       load();
     } catch (err) {
-      alert(err.message || 'ปรับจำนวนไม่สำเร็จ');
+      notify(err.message || 'ปรับจำนวนไม่สำเร็จ');
     }
   };
 
@@ -39,7 +41,7 @@ export default function CartPage() {
       window.dispatchEvent(new Event('cartUpdated'));
       load();
     } catch (err) {
-      alert(err.message || 'นำออกจากตะกร้าไม่สำเร็จ');
+      notify(err.message || 'นำออกจากตะกร้าไม่สำเร็จ');
     }
   };
 
@@ -133,10 +135,10 @@ export default function CartPage() {
                   try {
                     await checkout();
                     window.dispatchEvent(new Event('cartUpdated'));
-                    alert('สั่งซื้อสำเร็จ! ยอดรวม ฿' + totalPrice.toLocaleString());
+                    notify('สั่งซื้อสำเร็จ! ยอดรวม ฿' + totalPrice.toLocaleString());
                     navigate('/profile');
                   } catch (err) {
-                    alert(err.message || 'สั่งซื้อไม่สำเร็จ');
+                    notify(err.message || 'สั่งซื้อไม่สำเร็จ');
                   }
                 }}
                 className="mt-6 w-full bg-[#6B4F3B] hover:bg-[#533C2C] text-white font-bold py-3 rounded-xl text-xs transition shadow-sm"

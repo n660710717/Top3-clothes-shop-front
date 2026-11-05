@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAdminMembers, getDisputes, resolveDispute, getAdminReviews, deleteReview } from '../../api/backend';
+import { useNotice } from '../../components/Notice';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('members');
   const [members, setMembers] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [comments, setComments] = useState([]);
+  const { notify, confirm } = useNotice();
   //const [showContactModal, setShowContactModal] = useState(false);
   //const [selectedSeller, setSelectedSeller] = useState(null);
 
@@ -26,27 +28,27 @@ export default function AdminDashboard() {
 
   const handleApproveSeller = (appId) => {
     setSellerApplications(sellerApplications.filter((a) => a.id !== appId));
-    alert('อนุมัติเปิดร้านค้าใหม่บนแพลตฟอร์มสำเร็จ!');
+    notify('อนุมัติเปิดร้านค้าใหม่บนแพลตฟอร์มสำเร็จ!');
   };
 
   const handleResolveDispute = async (disputeId) => {
     try {
       await resolveDispute(disputeId);
       setDisputes(await getDisputes());
-      alert('แอดมินทำการเคลียร์เรื่องร้องเรียนสำเร็จ!');
+      notify('แอดมินทำการเคลียร์เรื่องร้องเรียนสำเร็จ!');
     } catch (err) {
-      alert(err.message || 'ปิดคำร้องไม่สำเร็จ');
+      notify(err.message || 'ปิดคำร้องไม่สำเร็จ');
     }
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!window.confirm('แอดมินยืนยันการลบคอมเมนต์ที่ไม่เหมาะสมนี้จากระบบ?')) return;
+    if (!(await confirm('แอดมินยืนยันการลบคอมเมนต์ที่ไม่เหมาะสมนี้จากระบบ?'))) return;
     try {
       await deleteReview(commentId);
       setComments(await getAdminReviews());
-      alert('ลบคอมเมนต์สำเร็จ');
+      notify('ลบคอมเมนต์สำเร็จ');
     } catch (err) {
-      alert(err.message || 'ลบคอมเมนต์ไม่สำเร็จ');
+      notify(err.message || 'ลบคอมเมนต์ไม่สำเร็จ');
     }
   };
 

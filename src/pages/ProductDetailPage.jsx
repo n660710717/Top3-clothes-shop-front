@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getProduct, getReviews, createReview, deleteReview, addCart, getMessages, sendMessage, createDispute } from '../api/backend';
 import Navbar from '../components/Navbar';
+import { useNotice } from '../components/Notice';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { notify, confirm } = useNotice();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState('');
@@ -62,7 +64,7 @@ export default function ProductDetailPage() {
     const msg = textToSend || inputMessage;
     if (!msg.trim()) return;
     if (!currentUser || currentUser.role !== 'buyer') {
-      alert('กรุณาเข้าสู่ระบบด้วยบัญชีผู้ซื้อก่อนทักร้าน');
+      notify('กรุณาเข้าสู่ระบบด้วยบัญชีผู้ซื้อก่อนทักร้าน');
       return;
     }
     try {
@@ -70,42 +72,42 @@ export default function ProductDetailPage() {
       setInputMessage('');
       await reloadMessages();
     } catch (err) {
-      alert(err.message || 'ส่งข้อความไม่สำเร็จ');
+      notify(err.message || 'ส่งข้อความไม่สำเร็จ');
     }
   };
 
   const handleAddToCart = async () => {
     if (!product) return;
     if (!currentUser) {
-      alert('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
+      notify('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
       navigate('/login');
       return;
     }
     if (currentUser.role !== 'buyer') {
-      alert('บัญชีสิทธิ์ผู้ขายและแอดมินไม่สามารถเพิ่มสินค้าลงตะกร้าได้');
+      notify('บัญชีสิทธิ์ผู้ขายและแอดมินไม่สามารถเพิ่มสินค้าลงตะกร้าได้');
       return;
     }
     if (!selectedSize) {
-      alert('กรุณาเลือกไซซ์');
+      notify('กรุณาเลือกไซซ์');
       return;
     }
     try {
       await addCart(product.id, selectedSize, 1);
       window.dispatchEvent(new Event('cartUpdated'));
-      alert('เพิ่มสินค้าลงตะกร้าเรียบร้อย!');
+      notify('เพิ่มสินค้าลงตะกร้าเรียบร้อย!');
     } catch (err) {
-      alert(err.message || 'เพิ่มลงตะกร้าไม่สำเร็จ');
+      notify(err.message || 'เพิ่มลงตะกร้าไม่สำเร็จ');
     }
   };
 
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser) {
-      alert('กรุณาเข้าสู่ระบบก่อนส่งความคิดเห็น');
+      notify('กรุณาเข้าสู่ระบบก่อนส่งความคิดเห็น');
       return;
     }
     if (currentUser.role !== 'buyer') {
-      alert('สิทธิ์ผู้ขายและแอดมินไม่สามารถส่งรีวิวสินค้าได้');
+      notify('สิทธิ์ผู้ขายและแอดมินไม่สามารถส่งรีวิวสินค้าได้');
       return;
     }
     if (!userReview.trim()) return;
@@ -113,20 +115,20 @@ export default function ProductDetailPage() {
       await createReview(id, userRating, userReview.trim());
       setUserReview('');
       setReviewsList(await getReviews(id));
-      alert('ขอบคุณสำหรับคะแนนและรีวิวสินค้า!');
+      notify('ขอบคุณสำหรับคะแนนและรีวิวสินค้า!');
     } catch (err) {
-      alert(err.message || 'ส่งรีวิวไม่สำเร็จ');
+      notify(err.message || 'ส่งรีวิวไม่สำเร็จ');
     }
   };
 
   const handleDeleteReviewByAdmin = async (reviewId) => {
-    if (!window.confirm('แอดมินยืนยันการลบคอมเมนต์นี้เนื่องจากไม่เหมาะสม?')) return;
+    if (!(await confirm('แอดมินยืนยันการลบคอมเมนต์นี้เนื่องจากไม่เหมาะสม?'))) return;
     try {
       await deleteReview(reviewId);
       setReviewsList(await getReviews(id));
-      alert('แอดมินทำการลบคอมเมนต์เรียบร้อยแล้ว');
+      notify('แอดมินทำการลบคอมเมนต์เรียบร้อยแล้ว');
     } catch (err) {
-      alert(err.message || 'ลบรีวิวไม่สำเร็จ');
+      notify(err.message || 'ลบรีวิวไม่สำเร็จ');
     }
   };
 
@@ -134,16 +136,16 @@ export default function ProductDetailPage() {
     e.preventDefault();
     if (!disputeReason.trim()) return;
     if (!currentUser || currentUser.role !== 'buyer') {
-      alert('กรุณาเข้าสู่ระบบด้วยบัญชีผู้ซื้อก่อนร้องเรียน');
+      notify('กรุณาเข้าสู่ระบบด้วยบัญชีผู้ซื้อก่อนร้องเรียน');
       return;
     }
     try {
       await createDispute(id, disputeReason.trim());
       setShowDisputeModal(false);
       setDisputeReason('');
-      alert('ส่งเรื่องร้องเรียนสินค้าไปยังผู้ดูแลระบบเรียบร้อยแล้ว!');
+      notify('ส่งเรื่องร้องเรียนสินค้าไปยังผู้ดูแลระบบเรียบร้อยแล้ว!');
     } catch (err) {
-      alert(err.message || 'ส่งคำร้องไม่สำเร็จ');
+      notify(err.message || 'ส่งคำร้องไม่สำเร็จ');
     }
   };
 

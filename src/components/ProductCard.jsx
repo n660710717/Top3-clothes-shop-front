@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { wished, toggleWishlist, addCart } from '../api/backend';
+import { useNotice } from './Notice';
 
 export default function ProductCard({ product, onEditProduct }) {
   const navigate = useNavigate();
+  const { notify } = useNotice();
   const [isFav, setIsFav] = useState(false);
   const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 
@@ -23,7 +25,7 @@ export default function ProductCard({ product, onEditProduct }) {
   const toggleFav = async (e) => {
     e.preventDefault();
     if (!currentUser) {
-      alert('กรุณาเข้าสู่ระบบก่อนกดถูกใจ');
+      notify('กรุณาเข้าสู่ระบบก่อนกดถูกใจ');
       navigate('/login');
       return;
     }
@@ -33,28 +35,28 @@ export default function ProductCard({ product, onEditProduct }) {
       setIsFav(!!data?.liked);
       window.dispatchEvent(new Event('wishlistUpdated'));
     } catch (err) {
-      alert(err.message || 'บันทึกถูกใจไม่สำเร็จ');
+      notify(err.message || 'บันทึกถูกใจไม่สำเร็จ');
     }
   };
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
     if (!currentUser) {
-      alert('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
+      notify('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
       navigate('/login');
       return;
     }
     if (currentUser.role !== 'buyer') {
-      alert('บัญชีผู้ขายและแอดมินเพิ่มสินค้าลงตะกร้าไม่ได้');
+      notify('บัญชีผู้ขายและแอดมินเพิ่มสินค้าลงตะกร้าไม่ได้');
       return;
     }
     try {
       const size = (product.sizes && product.sizes[0]) || 'M';
       await addCart(product.id, size, 1);
       window.dispatchEvent(new Event('cartUpdated'));
-      alert('เพิ่มสินค้าลงตะกร้าเรียบร้อยแล้ว!');
+      notify('เพิ่มสินค้าลงตะกร้าเรียบร้อยแล้ว!');
     } catch (err) {
-      alert(err.message || 'เพิ่มลงตะกร้าไม่สำเร็จ');
+      notify(err.message || 'เพิ่มลงตะกร้าไม่สำเร็จ');
     }
   };
 
