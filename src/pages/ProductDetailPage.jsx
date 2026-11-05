@@ -197,7 +197,7 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="flex items-center gap-1.5 mt-2 text-sm text-amber-500">
-                <span>★ {product.rating || 4.5}</span>
+                <span>{reviewsList.length > 0 ? `★ ${(reviewsList.reduce((sum, rev) => sum + Number(rev.rating), 0) / reviewsList.length).toFixed(1)}` : 'ยังไม่มีรีวิว'}</span>
                 <span className="text-xs text-[#A68F7E]">({reviewsList.length} รีวิวจากผู้ซื้อ)</span>
               </div>
 

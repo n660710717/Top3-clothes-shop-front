@@ -176,7 +176,7 @@ export default function SellerDashboard() {
                       <td className="p-2.5 font-bold text-[#38281F]">{p.name || p.title}</td>
                       <td className="p-2.5 text-[#8C6D58]">{p.category}</td>
                       <td className="p-2.5 font-bold text-[#6B4F3B]">฿{Number(p.price).toLocaleString()}</td>
-                      <td className="p-2.5 text-amber-500 font-bold">★ {p.rating || '4.5'}</td>
+                      <td className="p-2.5 text-amber-500 font-bold">{p.reviewCount > 0 ? `★ ${p.rating}` : 'ยังไม่มีรีวิว'}</td>
                       <td className="p-2.5 text-center font-bold">{p.stock || 20}</td>
                       <td className="p-2.5 text-center">
                         <div className="inline-flex gap-2">

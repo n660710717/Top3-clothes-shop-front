@@ -92,7 +92,7 @@ export default function ProductCard({ product, onEditProduct }) {
 
         <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-500">
           <span>★</span>
-          <span className="font-semibold text-[#533C2C]">{product.rating || '4.5'}</span>
+          <span className="font-semibold text-[#533C2C]">{product.reviewCount > 0 ? product.rating : 'ยังไม่มีรีวิว'}</span>
         </div>
       </Link>
 
