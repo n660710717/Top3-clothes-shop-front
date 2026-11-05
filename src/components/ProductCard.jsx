@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { wished, toggleWishlist, addCart } from '../api/backend';
 
 export default function ProductCard({ product, onEditProduct }) {
   const navigate = useNavigate();
@@ -10,42 +11,51 @@ export default function ProductCard({ product, onEditProduct }) {
   const productImage = product.image_url || product.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500';
 
   useEffect(() => {
-    const favs = JSON.parse(localStorage.getItem('wishlist') || '[]');
-    setIsFav(favs.some((item) => item.id === product.id));
+    let alive = true;
+    wished(product.id).then((liked) => {
+      if (alive) setIsFav(liked);
+    }).catch(() => {
+      if (alive) setIsFav(false);
+    });
+    return () => { alive = false; };
   }, [product.id]);
 
-  const toggleFav = (e) => {
+  const toggleFav = async (e) => {
     e.preventDefault();
-    let favs = JSON.parse(localStorage.getItem('wishlist') || '[]');
-    if (isFav) {
-      favs = favs.filter((item) => item.id !== product.id);
-      setIsFav(false);
-    } else {
-      favs.push({ id: product.id, name: productName, price: Number(product.price) || 0, image: productImage });
-      setIsFav(true);
+    if (!currentUser) {
+      alert('กรุณาเข้าสู่ระบบก่อนกดถูกใจ');
+      navigate('/login');
+      return;
     }
-    localStorage.setItem('wishlist', JSON.stringify(favs));
-    window.dispatchEvent(new Event('wishlistUpdated'));
+    if (currentUser.role !== 'buyer') return;
+    try {
+      const data = await toggleWishlist(product.id);
+      setIsFav(!!data?.liked);
+      window.dispatchEvent(new Event('wishlistUpdated'));
+    } catch (err) {
+      alert(err.message || 'บันทึกถูกใจไม่สำเร็จ');
+    }
   };
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     if (!currentUser) {
       alert('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
       navigate('/login');
       return;
     }
-    const currentCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingIndex = currentCart.findIndex((item) => item.id === product.id);
-
-    if (existingIndex > -1) {
-      currentCart[existingIndex].quantity = (currentCart[existingIndex].quantity || 1) + 1;
-    } else {
-      currentCart.push({ id: product.id, name: productName, price: Number(product.price) || 0, image: productImage, chosenSize: 'M', quantity: 1 });
+    if (currentUser.role !== 'buyer') {
+      alert('บัญชีผู้ขายและแอดมินเพิ่มสินค้าลงตะกร้าไม่ได้');
+      return;
     }
-    localStorage.setItem('cart', JSON.stringify(currentCart));
-    window.dispatchEvent(new Event('cartUpdated'));
-    alert('เพิ่มสินค้าลงตะกร้าเรียบร้อยแล้ว!');
+    try {
+      const size = (product.sizes && product.sizes[0]) || 'M';
+      await addCart(product.id, size, 1);
+      window.dispatchEvent(new Event('cartUpdated'));
+      alert('เพิ่มสินค้าลงตะกร้าเรียบร้อยแล้ว!');
+    } catch (err) {
+      alert(err.message || 'เพิ่มลงตะกร้าไม่สำเร็จ');
+    }
   };
 
   return (

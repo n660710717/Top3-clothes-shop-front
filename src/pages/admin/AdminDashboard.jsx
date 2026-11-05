@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAdminMembers } from '../../api/backend';
+import { getAdminMembers, getDisputes, resolveDispute, getAdminReviews, deleteReview } from '../../api/backend';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('members');
   const [members, setMembers] = useState([]);
   const [disputes, setDisputes] = useState([]);
+  const [comments, setComments] = useState([]);
   //const [showContactModal, setShowContactModal] = useState(false);
   //const [selectedSeller, setSelectedSeller] = useState(null);
 
@@ -13,9 +14,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     getAdminMembers(token).then(setMembers).catch(() => setMembers([]));
-
-    const savedDisputes = JSON.parse(localStorage.getItem('disputes') || '[]');
-    setDisputes(savedDisputes);
+    getDisputes().then(setDisputes).catch(() => setDisputes([]));
+    getAdminReviews().then(setComments).catch(() => setComments([]));
   }, []);
 
   // คำขออนุมัติผู้ขายใหม่
@@ -24,28 +24,30 @@ export default function AdminDashboard() {
     { id: 102, shopName: 'Korean Streetwear', owner: 'คุณนนทวัฒน์', email: 'nont@shop.com', phone: '089-876-5432', date: '2026-11-04', status: 'รอการอนุมัติ' }
   ]);
 
-  // คอมเมนต์สำหรับให้แอดมินลบ
-  const [comments, setComments] = useState([
-    { id: 1, productName: 'เสื้อยืดคอกลมสีขาว', user: 'คุณสุภาพร (Buyer)', comment: 'ข้อความไม่เหมาะสม สแปมลิงก์', date: '2026-11-02' },
-    { id: 2, productName: 'กางเกงยีนส์ขายาว', user: 'คุณกิตติศักดิ์ (Buyer)', comment: 'ผ้าใส่สบายมากครับ จัดส่งรวดเร็ว', date: '2026-11-03' }
-  ]);
-
   const handleApproveSeller = (appId) => {
     setSellerApplications(sellerApplications.filter((a) => a.id !== appId));
     alert('อนุมัติเปิดร้านค้าใหม่บนแพลตฟอร์มสำเร็จ!');
   };
 
-  const handleResolveDispute = (disputeId) => {
-    const updated = disputes.filter((d) => d.id !== disputeId);
-    setDisputes(updated);
-    localStorage.setItem('disputes', JSON.stringify(updated));
-    alert('แอดมินทำการเคลียร์เรื่องร้องเรียนสำเร็จ!');
+  const handleResolveDispute = async (disputeId) => {
+    try {
+      await resolveDispute(disputeId);
+      setDisputes(await getDisputes());
+      alert('แอดมินทำการเคลียร์เรื่องร้องเรียนสำเร็จ!');
+    } catch (err) {
+      alert(err.message || 'ปิดคำร้องไม่สำเร็จ');
+    }
   };
 
-  const handleDeleteComment = (commentId) => {
+  const handleDeleteComment = async (commentId) => {
     if (!window.confirm('แอดมินยืนยันการลบคอมเมนต์ที่ไม่เหมาะสมนี้จากระบบ?')) return;
-    setComments(comments.filter((c) => c.id !== commentId));
-    alert('ลบคอมเมนต์สำเร็จ');
+    try {
+      await deleteReview(commentId);
+      setComments(await getAdminReviews());
+      alert('ลบคอมเมนต์สำเร็จ');
+    } catch (err) {
+      alert(err.message || 'ลบคอมเมนต์ไม่สำเร็จ');
+    }
   };
 
   return (

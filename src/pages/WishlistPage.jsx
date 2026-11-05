@@ -1,20 +1,28 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { getWishlist, toggleWishlist } from '../api/backend';
 
 export default function WishlistPage() {
   const [wishlist, setWishlist] = useState([]);
 
   useEffect(() => {
-    const favs = JSON.parse(localStorage.getItem('wishlist') || '[]');
-    setWishlist(favs);
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!user || user.role !== 'buyer') {
+      setWishlist([]);
+      return;
+    }
+    getWishlist().then(setWishlist).catch(() => setWishlist([]));
   }, []);
 
-  const removeFav = (id) => {
-    const updated = wishlist.filter((item) => item.id !== id);
-    setWishlist(updated);
-    localStorage.setItem('wishlist', JSON.stringify(updated));
-    window.dispatchEvent(new Event('wishlistUpdated'));
+  const removeFav = async (id) => {
+    try {
+      await toggleWishlist(id);
+      setWishlist(wishlist.filter((item) => item.id !== id));
+      window.dispatchEvent(new Event('wishlistUpdated'));
+    } catch (err) {
+      alert(err.message || 'นำออกจากรายการที่ชอบไม่สำเร็จ');
+    }
   };
 
   return (
@@ -43,7 +51,7 @@ export default function WishlistPage() {
                 >
                   ✕
                 </button>
-                <img src={item.image} alt="" className="w-full aspect-square object-cover rounded-xl bg-[#FAF7F2] mb-2" />
+                <img src={item.image || item.image_url} alt="" className="w-full aspect-square object-cover rounded-xl bg-[#FAF7F2] mb-2" />
                 <h3 className="font-semibold text-xs text-[#38281F] truncate">{item.name}</h3>
                 <p className="font-bold text-[#8C6D58] text-sm mt-1">฿{item.price}</p>
                 <Link

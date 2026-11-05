@@ -1,37 +1,46 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { getCart, setCartItem, checkout } from '../api/backend';
 
 export default function CartPage() {
   const [cart, setCart] = useState([]);
   const navigate = useNavigate();
 
+  const load = () => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!user || user.role !== 'buyer') {
+      setCart([]);
+      return;
+    }
+    getCart().then(setCart).catch(() => setCart([]));
+  };
+
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCart(saved);
+    load();
   }, []);
 
-  const updateCart = (newCart) => {
-    setCart(newCart);
-    localStorage.setItem('cart', JSON.stringify(newCart));
-    window.dispatchEvent(new Event('cartUpdated'));
-  };
-
-  const updateQty = (index, delta) => {
-    const updated = [...cart];
-    const newQty = updated[index].quantity + delta;
-    if (newQty <= 0) {
-      updated.splice(index, 1);
-    } else {
-      updated[index].quantity = newQty;
+  const updateQty = async (index, delta) => {
+    const item = cart[index];
+    const newQty = item.quantity + delta;
+    try {
+      await setCartItem(item.id, item.chosenSize, newQty);
+      window.dispatchEvent(new Event('cartUpdated'));
+      load();
+    } catch (err) {
+      alert(err.message || 'ปรับจำนวนไม่สำเร็จ');
     }
-    updateCart(updated);
   };
 
-  const removeItem = (index) => {
-    const updated = [...cart];
-    updated.splice(index, 1);
-    updateCart(updated);
+  const removeItem = async (index) => {
+    const item = cart[index];
+    try {
+      await setCartItem(item.id, item.chosenSize, 0);
+      window.dispatchEvent(new Event('cartUpdated'));
+      load();
+    } catch (err) {
+      alert(err.message || 'นำออกจากตะกร้าไม่สำเร็จ');
+    }
   };
 
   const totalPrice = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 1), 0);
@@ -120,10 +129,15 @@ export default function CartPage() {
                 </div>
               </div>
               <button
-                onClick={() => {
-                  alert('ชำระเงินจำลองสำเร็จ! ยอดรวม ฿' + totalPrice.toLocaleString());
-                  updateCart([]);
-                  navigate('/');
+                onClick={async () => {
+                  try {
+                    await checkout();
+                    window.dispatchEvent(new Event('cartUpdated'));
+                    alert('สั่งซื้อสำเร็จ! ยอดรวม ฿' + totalPrice.toLocaleString());
+                    navigate('/profile');
+                  } catch (err) {
+                    alert(err.message || 'สั่งซื้อไม่สำเร็จ');
+                  }
                 }}
                 className="mt-6 w-full bg-[#6B4F3B] hover:bg-[#533C2C] text-white font-bold py-3 rounded-xl text-xs transition shadow-sm"
               >

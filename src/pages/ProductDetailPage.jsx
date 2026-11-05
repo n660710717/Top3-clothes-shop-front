@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getProduct } from '../api/backend';
+import { getProduct, getReviews, createReview, deleteReview, addCart, getMessages, sendMessage, createDispute } from '../api/backend';
 import Navbar from '../components/Navbar';
 
 export default function ProductDetailPage() {
@@ -33,121 +33,118 @@ export default function ProductDetailPage() {
     getProduct(id).then((data) => {
       setProduct(data);
       if (data?.sizes && data.sizes.length > 0) setSelectedSize(data.sizes[0]);
-      setReviewsList([]);
       setLoading(false);
     }).catch(() => {
       setProduct(null);
       setLoading(false);
     });
+    getReviews(id).then(setReviewsList).catch(() => setReviewsList([]));
+    const saved = JSON.parse(localStorage.getItem('user') || 'null');
+    if (saved?.role === 'buyer') {
+      getMessages(id).then((items) => {
+        setChatMessages([
+          { id: 'welcome', sender: 'seller', text: 'สวัสดีค่ะ ยินดีให้บริการ สอบถามข้อมูลเสื้อผ้าเพิ่มเติมได้เลยค่ะ', time: '' },
+          ...items,
+        ]);
+      }).catch(() => {});
+    }
   }, [id]);
 
-  // ส่งข้อความแชทหาผู้ขาย
-  const handleSendMessage = (textToSend) => {
-    const msg = textToSend || inputMessage;
-    if (!msg.trim()) return;
-
-    const newMsg = {
-      id: Date.now(),
-      sender: 'user',
-      text: msg,
-      time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
-    };
-
-    setChatMessages((prev) => [...prev, newMsg]);
-    setInputMessage('');
-
-    // ตอบกลับอัตโนมัติจากผู้ขาย
-    setTimeout(() => {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'seller',
-          text: 'รับทราบครับผม! แอดมินร้าน Somchai Seller Shop ได้รับข้อความแล้ว จะรีบดำเนินการตรวจสอบให้ครับ 🙏',
-          time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
-        }
-      ]);
-    }, 1200);
+  const reloadMessages = async () => {
+    const items = await getMessages(id);
+    setChatMessages([
+      { id: 'welcome', sender: 'seller', text: 'สวัสดีค่ะ ยินดีให้บริการ สอบถามข้อมูลเสื้อผ้าเพิ่มเติมได้เลยค่ะ', time: '' },
+      ...items,
+    ]);
   };
 
-  // ผู้ซื้อเพิ่มสินค้าลงตะกร้า
-  const handleAddToCart = () => {
+  const handleSendMessage = async (textToSend) => {
+    const msg = textToSend || inputMessage;
+    if (!msg.trim()) return;
+    if (!currentUser || currentUser.role !== 'buyer') {
+      alert('กรุณาเข้าสู่ระบบด้วยบัญชีผู้ซื้อก่อนทักร้าน');
+      return;
+    }
+    try {
+      await sendMessage(id, msg.trim());
+      setInputMessage('');
+      await reloadMessages();
+    } catch (err) {
+      alert(err.message || 'ส่งข้อความไม่สำเร็จ');
+    }
+  };
+
+  const handleAddToCart = async () => {
     if (!product) return;
-    if (currentUser?.role === 'seller' || currentUser?.role === 'admin') {
+    if (!currentUser) {
+      alert('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า');
+      navigate('/login');
+      return;
+    }
+    if (currentUser.role !== 'buyer') {
       alert('บัญชีสิทธิ์ผู้ขายและแอดมินไม่สามารถเพิ่มสินค้าลงตะกร้าได้');
       return;
     }
-    const currentCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingIndex = currentCart.findIndex((item) => item.id === product.id && item.chosenSize === selectedSize);
-
-    if (existingIndex > -1) {
-      currentCart[existingIndex].quantity += 1;
-    } else {
-      currentCart.push({
-        id: product.id,
-        name: product.name || product.title,
-        price: Number(product.price) || 0,
-        image: product.image_url || product.image,
-        chosenSize: selectedSize,
-        quantity: 1
-      });
+    if (!selectedSize) {
+      alert('กรุณาเลือกไซซ์');
+      return;
     }
-
-    localStorage.setItem('cart', JSON.stringify(currentCart));
-    window.dispatchEvent(new Event('cartUpdated'));
-    alert('เพิ่มสินค้าลงตะกร้าเรียบร้อย!');
+    try {
+      await addCart(product.id, selectedSize, 1);
+      window.dispatchEvent(new Event('cartUpdated'));
+      alert('เพิ่มสินค้าลงตะกร้าเรียบร้อย!');
+    } catch (err) {
+      alert(err.message || 'เพิ่มลงตะกร้าไม่สำเร็จ');
+    }
   };
 
-  // ผู้ซื้อส่งรีวิวและให้คะแนนดาว
-  const handleReviewSubmit = (e) => {
+  const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser) {
       alert('กรุณาเข้าสู่ระบบก่อนส่งความคิดเห็น');
       return;
     }
-    if (currentUser.role === 'seller' || currentUser.role === 'admin') {
+    if (currentUser.role !== 'buyer') {
       alert('สิทธิ์ผู้ขายและแอดมินไม่สามารถส่งรีวิวสินค้าได้');
       return;
     }
     if (!userReview.trim()) return;
-
-    const newReview = {
-      id: Date.now(),
-      user: `${currentUser.displayName || currentUser.email} (Buyer)`,
-      rating: userRating,
-      comment: userReview,
-      date: 'เมื่อสักครู่'
-    };
-
-    setReviewsList([newReview, ...reviewsList]);
-    setUserReview('');
-    alert('ขอบคุณสำหรับคะแนนและรีวิวสินค้า!');
+    try {
+      await createReview(id, userRating, userReview.trim());
+      setUserReview('');
+      setReviewsList(await getReviews(id));
+      alert('ขอบคุณสำหรับคะแนนและรีวิวสินค้า!');
+    } catch (err) {
+      alert(err.message || 'ส่งรีวิวไม่สำเร็จ');
+    }
   };
 
-  // แอดมินลบคอมเมนต์ที่ไม่เหมาะสม
-  const handleDeleteReviewByAdmin = (reviewId) => {
+  const handleDeleteReviewByAdmin = async (reviewId) => {
     if (!window.confirm('แอดมินยืนยันการลบคอมเมนต์นี้เนื่องจากไม่เหมาะสม?')) return;
-    setReviewsList(reviewsList.filter((r) => r.id !== reviewId));
-    alert('แอดมินทำการลบคอมเมนต์เรียบร้อยแล้ว');
+    try {
+      await deleteReview(reviewId);
+      setReviewsList(await getReviews(id));
+      alert('แอดมินทำการลบคอมเมนต์เรียบร้อยแล้ว');
+    } catch (err) {
+      alert(err.message || 'ลบรีวิวไม่สำเร็จ');
+    }
   };
 
-  // ผู้ซื้อส่งเรื่องร้องเรียน (Dispute)
-  const handleSendDispute = (e) => {
+  const handleSendDispute = async (e) => {
     e.preventDefault();
     if (!disputeReason.trim()) return;
-
-    const disputes = JSON.parse(localStorage.getItem('disputes') || '[]');
-    disputes.push({
-      id: Date.now(),
-      productName: product.name || product.title,
-      buyerName: currentUser?.displayName || currentUser?.email || 'Praewa Buyer',
-      reason: disputeReason,
-      date: new Date().toLocaleDateString('th-TH')
-    });
-    localStorage.setItem('disputes', JSON.stringify(disputes));
-    setShowDisputeModal(false);
-    setDisputeReason('');
-    alert('ส่งเรื่องร้องเรียนสินค้าไปยังผู้ดูแลระบบเรียบร้อยแล้ว!');
+    if (!currentUser || currentUser.role !== 'buyer') {
+      alert('กรุณาเข้าสู่ระบบด้วยบัญชีผู้ซื้อก่อนร้องเรียน');
+      return;
+    }
+    try {
+      await createDispute(id, disputeReason.trim());
+      setShowDisputeModal(false);
+      setDisputeReason('');
+      alert('ส่งเรื่องร้องเรียนสินค้าไปยังผู้ดูแลระบบเรียบร้อยแล้ว!');
+    } catch (err) {
+      alert(err.message || 'ส่งคำร้องไม่สำเร็จ');
+    }
   };
 
   if (loading) return <div className="text-center py-24 text-[#8C6D58] font-medium">กำลังโหลดข้อมูลเสื้อผ้า...</div>;

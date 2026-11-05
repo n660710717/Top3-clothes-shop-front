@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { getCart, getWishlist, clearPersonalCache } from '../api/backend';
 
 export default function Navbar({ onSearch, onCategorySelect }) {
   const [keyword, setKeyword] = useState('');
@@ -10,18 +11,25 @@ export default function Navbar({ onSearch, onCategorySelect }) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const navigate = useNavigate();
 
-  const updateStatus = () => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCartCount(cart.reduce((sum, item) => sum + (item.quantity || 1), 0));
-
-    const favs = JSON.parse(localStorage.getItem('wishlist') || '[]');
-    setWishlistCount(favs.length);
-
+  const updateStatus = async () => {
     const savedUser = localStorage.getItem('user');
+    let parsed = null;
     if (savedUser) {
-      try { setUser(JSON.parse(savedUser)); } catch (e) { setUser(null); }
-    } else {
-      setUser(null);
+      try { parsed = JSON.parse(savedUser); } catch (e) { parsed = null; }
+    }
+    setUser(parsed);
+    if (!parsed || parsed.role !== 'buyer') {
+      setCartCount(0);
+      setWishlistCount(0);
+      return;
+    }
+    try {
+      const [cart, favs] = await Promise.all([getCart(), getWishlist()]);
+      setCartCount(cart.reduce((sum, item) => sum + (item.quantity || 1), 0));
+      setWishlistCount(favs.length);
+    } catch (e) {
+      setCartCount(0);
+      setWishlistCount(0);
     }
   };
 
@@ -48,6 +56,7 @@ export default function Navbar({ onSearch, onCategorySelect }) {
   };
 
   const handleLogout = () => {
+    clearPersonalCache();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);

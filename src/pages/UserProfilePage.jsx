@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { changePassword } from '../api/backend';
+import { changePassword, getMyOrders } from '../api/backend';
 
 export default function UserProfilePage() {
   const [currentUser] = useState(() => {
-    return JSON.parse(localStorage.getItem('user') || '{"displayName":"Praewa Buyer","email":"praewa@buyer.com","role":"buyer"}');
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null');
+    } catch {
+      return null;
+    }
   });
 
   const [oldPassword, setOldPassword] = useState('');
@@ -13,10 +17,12 @@ export default function UserProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMsg, setPasswordMsg] = useState({ type: '', text: '' });
 
-  const [orders] = useState([
-    { id: 'ORD-8801', date: '2026-11-01', total: 590, status: 'จัดส่งสำเร็จ', items: 'กางเกงยีนส์ขายาว (1 ชิ้น)' },
-    { id: 'ORD-8802', date: '2026-11-04', total: 299, status: 'กำลังจัดส่ง', items: 'เสื้อยืดคอกลมสีขาว (1 ชิ้น)' }
-  ]);
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    if (currentUser?.role !== 'buyer') return;
+    getMyOrders().then(setOrders).catch(() => setOrders([]));
+  }, [currentUser]);
 
   // ฟังก์ชันเปลี่ยนรหัสผ่านจริง
   const handleChangePassword = async (e) => {
@@ -44,6 +50,18 @@ export default function UserProfilePage() {
       setPasswordMsg({ type: 'error', text: err.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ' });
     }
   };
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] text-[#4A3B32] font-sans">
+        <Navbar />
+        <main className="mx-auto max-w-4xl px-4 py-16 text-center">
+          <p className="text-sm text-[#8C6D58] mb-4">เข้าสู่ระบบก่อนดูโปรไฟล์และคำสั่งซื้อของตัวเอง</p>
+          <Link to="/login" className="text-xs font-bold text-white bg-[#6B4F3B] px-4 py-2 rounded-xl">เข้าสู่ระบบ</Link>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#4A3B32] font-sans">

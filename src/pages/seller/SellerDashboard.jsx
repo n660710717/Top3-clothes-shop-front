@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getProducts, deleteProduct } from '../../api/backend';
+import { getSellerProducts, deleteProduct, getSellerOrders, shipOrder, createSellerProduct, updateSellerProduct } from '../../api/backend';
 
 export default function SellerDashboard() {
   const [activeTab, setActiveTab] = useState('products');
@@ -8,29 +8,18 @@ export default function SellerDashboard() {
   const token = localStorage.getItem('token');
   //const navigate = useNavigate();
 
-  // ข้อมูลคำสั่งซื้อคงทนผ่าน localStorage
-  const [orders, setOrders] = useState(() => {
-    const saved = localStorage.getItem('seller_orders');
-    return saved ? JSON.parse(saved) : [
-      { id: 'ORD-1001', customer: 'Praewa Buyer', item: 'เสื้อยืดคอกลมสีขาว (Size M)', amount: 299, status: 'รอการจัดส่ง', trackingNo: '' },
-      { id: 'ORD-1002', customer: 'คุณสมชาย', item: 'กางเกงยีนส์ขายาว (Size 32)', amount: 590, status: 'รอการจัดส่ง', trackingNo: '' },
-      { id: 'ORD-1003', customer: 'คุณวิภาวี', item: 'เดรสลายดอกไม้ (Size S)', amount: 450, status: 'จัดส่งแล้ว', trackingNo: 'TH987654321' }
-    ];
-  });
+  const [orders, setOrders] = useState([]);
 
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formProduct, setFormProduct] = useState({
-    id: null, name: '', category: 'เสื้อ', price: '', stock: '', image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500'
+    id: null, name: '', category: 'เสื้อ', price: '', stock: '', image: ''
   });
 
   useEffect(() => {
-    getProducts().then((data) => setProducts(data || [])).catch(() => setProducts([]));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('seller_orders', JSON.stringify(orders));
-  }, [orders]);
+    getSellerProducts(token).then((data) => setProducts(data || [])).catch(() => setProducts([]));
+    getSellerOrders().then(setOrders).catch(() => setOrders([]));
+  }, [token]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('คุณแน่ใจว่าต้องการลบสินค้านี้ออกจากร้าน Somchai Seller Shop?')) return;
@@ -45,7 +34,7 @@ export default function SellerDashboard() {
 
   const handleOpenAdd = () => {
     setIsEditing(false);
-    setFormProduct({ id: null, name: '', category: 'เสื้อ', price: '', stock: '', image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500' });
+    setFormProduct({ id: null, name: '', category: 'เสื้อ', price: '', stock: '', image: '' });
     setShowModal(true);
   };
 
@@ -55,26 +44,42 @@ export default function SellerDashboard() {
     setShowModal(true);
   };
 
-  const handleSaveProduct = (e) => {
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
-    if (isEditing) {
-      setProducts(products.map((item) => item.id === formProduct.id ? { ...item, ...formProduct, price: Number(formProduct.price), stock: Number(formProduct.stock) } : item));
-      alert('แก้ไขรายละเอียดสินค้าเรียบร้อย');
-    } else {
-      setProducts([{ ...formProduct, id: Date.now(), title: formProduct.name, price: Number(formProduct.price), stock: Number(formProduct.stock), rating: 5.0, sizes: ['S', 'M', 'L'] }, ...products]);
-      alert('เพิ่มสินค้าใหม่เรียบร้อย');
+    const body = {
+      name: formProduct.name,
+      category: formProduct.category,
+      price: Number(formProduct.price),
+      stock: Number(formProduct.stock),
+      image: formProduct.image,
+    };
+    try {
+      if (isEditing) {
+        await updateSellerProduct(formProduct.id, body);
+        alert('แก้ไขรายละเอียดสินค้าเรียบร้อย');
+      } else {
+        await createSellerProduct(body);
+        alert('เพิ่มสินค้าใหม่เรียบร้อย');
+      }
+      setProducts(await getSellerProducts(token));
+      setShowModal(false);
+    } catch (err) {
+      alert(err.message || 'บันทึกสินค้าไม่สำเร็จ');
     }
-    setShowModal(false);
   };
 
-  const handleUpdateShipping = (orderId, trackingNo) => {
+  const handleUpdateShipping = async (orderId, trackingNo) => {
     if (!trackingNo.trim()) {
       alert('กรุณากรอกเลขพัสดุก่อนจัดส่ง');
       return;
     }
-    const updated = orders.map((o) => (o.id === orderId ? { ...o, status: 'จัดส่งแล้ว', trackingNo } : o));
-    setOrders(updated);
-    alert(`อัปเดตคำสั่งซื้อ ${orderId} เป็นจัดส่งแล้ว!`);
+    try {
+      await shipOrder(orderId, trackingNo.trim());
+      setOrders(await getSellerOrders());
+      alert(`อัปเดตคำสั่งซื้อ ${orderId} เป็นจัดส่งแล้ว!`);
+    } catch (err) {
+      alert(err.message || 'อัปเดตการจัดส่งไม่สำเร็จ');
+    }
   };
 
   return (
