@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { changePassword, getMyOrders } from '../api/backend';
+import { changePassword, getMyOrders, applyForShop } from '../api/backend';
+import { useNotice } from '../components/Notice';
 
 export default function UserProfilePage() {
   const [currentUser] = useState(() => {
@@ -18,11 +19,24 @@ export default function UserProfilePage() {
   const [passwordMsg, setPasswordMsg] = useState({ type: '', text: '' });
 
   const [orders, setOrders] = useState([]);
+  const [shopName, setShopName] = useState('');
+  const { notify } = useNotice();
 
   useEffect(() => {
     if (currentUser?.role !== 'buyer') return;
     getMyOrders().then(setOrders).catch(() => setOrders([]));
   }, [currentUser]);
+
+  const handleApplyShop = async (e) => {
+    e.preventDefault();
+    try {
+      await applyForShop(shopName.trim());
+      setShopName('');
+      notify('ส่งคำขอเปิดร้านแล้ว รอผู้ดูแลอนุมัติ');
+    } catch (err) {
+      notify(err.message || 'ส่งคำขอไม่สำเร็จ');
+    }
+  };
 
   // ฟังก์ชันเปลี่ยนรหัสผ่านจริง
   const handleChangePassword = async (e) => {
@@ -86,6 +100,24 @@ export default function UserProfilePage() {
             </div>
           </div>
         </div>
+
+        {currentUser.role === 'buyer' && (
+          <form onSubmit={handleApplyShop} className="bg-white rounded-3xl border border-[#EBD9C8] p-6 mb-6 shadow-sm">
+            <h2 className="text-base font-bold text-[#38281F] mb-3">ขอเปิดร้านค้า</h2>
+            <div className="flex gap-2">
+              <input
+                required
+                value={shopName}
+                onChange={(e) => setShopName(e.target.value)}
+                placeholder="ชื่อร้าน"
+                className="flex-1 p-2.5 border border-[#DCC5AF] rounded-xl text-xs"
+              />
+              <button type="submit" className="bg-[#6B4F3B] text-white text-xs font-bold px-4 rounded-xl">
+                ส่งคำขอ
+              </button>
+            </div>
+          </form>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* ฟอร์มเปลี่ยนรหัสผ่าน */}

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState } from 'react';
 import * as api from '../api/backend';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 function readUser() {
   try {

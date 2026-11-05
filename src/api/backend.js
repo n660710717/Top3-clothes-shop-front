@@ -64,6 +64,26 @@ export async function getAdminMembers(token) {
   return data?.items || [];
 }
 
+export function applyForShop(shopName) {
+  return apiFetch('/api/me/seller-application', {
+    method: 'POST',
+    token: tokenOf(),
+    body: { shopName },
+  });
+}
+
+export async function getSellerApplications() {
+  const data = await apiFetch('/api/admin/seller-applications', { token: tokenOf() });
+  return data?.items || [];
+}
+
+export function approveSellerApplication(id) {
+  return apiFetch(`/api/admin/seller-applications/${id}/approve`, {
+    method: 'POST',
+    token: tokenOf(),
+  });
+}
+
 export function setMemberRole(memberId, role, token) {
   return apiFetch(`/api/admin/members/${memberId}/role`, { method: 'PUT', body: { role }, token });
 }

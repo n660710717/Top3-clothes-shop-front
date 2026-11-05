@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAdminMembers, getDisputes, resolveDispute, getAdminReviews, deleteReview } from '../../api/backend';
+import { getAdminMembers, getDisputes, resolveDispute, getAdminReviews, deleteReview, getSellerApplications, approveSellerApplication } from '../../api/backend';
 import { useNotice } from '../../components/Notice';
 
 export default function AdminDashboard() {
@@ -8,6 +8,7 @@ export default function AdminDashboard() {
   const [members, setMembers] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [comments, setComments] = useState([]);
+  const [sellerApplications, setSellerApplications] = useState([]);
   const { notify, confirm } = useNotice();
   //const [showContactModal, setShowContactModal] = useState(false);
   //const [selectedSeller, setSelectedSeller] = useState(null);
@@ -18,17 +19,17 @@ export default function AdminDashboard() {
     getAdminMembers(token).then(setMembers).catch(() => setMembers([]));
     getDisputes().then(setDisputes).catch(() => setDisputes([]));
     getAdminReviews().then(setComments).catch(() => setComments([]));
+    getSellerApplications().then(setSellerApplications).catch(() => setSellerApplications([]));
   }, []);
 
-  // คำขออนุมัติผู้ขายใหม่
-  const [sellerApplications, setSellerApplications] = useState([
-    { id: 101, shopName: 'Minimal Chic Shop', owner: 'คุณศิริพร', email: 'siriporn@shop.com', phone: '081-234-5678', date: '2026-11-03', status: 'รอการอนุมัติ' },
-    { id: 102, shopName: 'Korean Streetwear', owner: 'คุณนนทวัฒน์', email: 'nont@shop.com', phone: '089-876-5432', date: '2026-11-04', status: 'รอการอนุมัติ' }
-  ]);
-
-  const handleApproveSeller = (appId) => {
-    setSellerApplications(sellerApplications.filter((a) => a.id !== appId));
-    notify('อนุมัติเปิดร้านค้าใหม่บนแพลตฟอร์มสำเร็จ!');
+  const handleApproveSeller = async (appId) => {
+    try {
+      await approveSellerApplication(appId);
+      setSellerApplications(await getSellerApplications());
+      notify('อนุมัติเปิดร้านค้าใหม่บนแพลตฟอร์มสำเร็จ!');
+    } catch (err) {
+      notify(err.message || 'อนุมัติร้านไม่สำเร็จ');
+    }
   };
 
   const handleResolveDispute = async (disputeId) => {
@@ -164,6 +165,11 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
+                  {sellerApplications.length === 0 && (
+                    <tr>
+                      <td className="p-4 text-slate-500" colSpan="5">ยังไม่มีคำขอเปิดร้าน</td>
+                    </tr>
+                  )}
                   {sellerApplications.map((app) => (
                     <tr key={app.id}>
                       <td className="p-3.5 font-bold">{app.shopName}</td>
